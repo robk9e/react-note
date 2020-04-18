@@ -8,6 +8,7 @@ import * as serviceWorker from "./serviceWorker";
 
 import Amplify from "aws-amplify";
 import aws_exports from "./aws-exports";
+import "@aws-amplify/ui/dist/style.css";
 
 Amplify.configure(aws_exports);
 

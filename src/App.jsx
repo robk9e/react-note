@@ -24,25 +24,55 @@ class App extends Component {
     this.setState({ note: event.target.value });
   };
 
+  hasExistingNote = () => {
+    const { notes, id } = this.state;
+    if (id) {
+      // is the id a valid id?
+      const isNote = notes.findIndex((note) => note.id === id) > -1;
+      return isNote;
+    }
+
+    return false;
+  };
+
+  handleUpdateNote = async (item) => {
+    const { notes, id, note } = this.state;
+    const input = { id, note };
+    const result = await API.graphql(graphqlOperation(updateNote, { input }));
+    const updatedNote = result.data.updateNote;
+    const index = notes.findIndex((note) => note.id === updatedNote.id);
+    const updatedNotes = [
+      ...notes.slice(0, index),
+      updatedNote,
+      ...notes.slice(index + 1),
+    ];
+
+    this.setState({ notes: updatedNotes, note: "", id: "" });
+  };
+
   handleAddNote = async (event) => {
     event.preventDefault();
     const { note, notes } = this.state;
-    const input = {
-      note,
-    };
-    const result = await API.graphql(graphqlOperation(createNote, { input }));
+    // check if we have an existing notem, if so update it
+    if (this.hasExistingNote()) {
+      this.handleUpdateNote();
+    } else {
+      const input = {
+        note,
+      };
+      const result = await API.graphql(graphqlOperation(createNote, { input }));
 
-    const newNote = result.data.createNote;
-    const updatedNotes = [newNote, ...notes];
+      const newNote = result.data.createNote;
+      const updatedNotes = [newNote, ...notes];
 
-    this.setState({ notes: updatedNotes, note: "" });
+      this.setState({ notes: updatedNotes, note: "" });
+    }
   };
 
   handleDeleteNote = async (noteId) => {
     const input = { id: noteId };
     const result = await API.graphql(graphqlOperation(deleteNote, { input }));
     const deletedNoteId = result.data.deleteNote.id;
-    console.log(deletedNoteId);
 
     const { notes } = this.state;
 
@@ -51,8 +81,12 @@ class App extends Component {
     this.setState({ notes: updatedNotes });
   };
 
+  handleSetNote = ({ note, id }) => {
+    this.setState({ note, id });
+  };
+
   render() {
-    const { notes, note } = this.state;
+    const { notes, note, id } = this.state;
     return (
       <div className="flex flex-column items-center justify-center pa3 bg-washed-red">
         <h1 className="code f2-1">Amplify Notetaker</h1>
@@ -66,14 +100,19 @@ class App extends Component {
             value={note}
           />
           <button className="pa2 f4" type="submit">
-            Add Note
+            {id ? "Update" : "Add Note"}
           </button>
         </form>
         {/* Notes List */}
         <div>
           {notes.map((item) => (
             <div key={item.id} className="flex items-center">
-              <li className="list pa1 f3">{item.note}</li>
+              <li
+                className="list pa1 f3"
+                onClick={() => this.handleSetNote(item)}
+              >
+                {item.note}
+              </li>
               <button
                 className="bg-transparent bn f4"
                 onClick={() => this.handleDeleteNote(item.id)}

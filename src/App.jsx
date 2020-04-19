@@ -1,7 +1,7 @@
 import React, { Component } from "react";
 
 /* Add note module */
-import { API, graphqlOperation } from "aws-amplify";
+import { API, graphqlOperation, Auth } from "aws-amplify";
 
 /* Import create note mutation file */
 import { createNote, updateNote, deleteNote } from "./graphql/mutations";
@@ -25,8 +25,12 @@ class App extends Component {
 
   async componentDidMount() {
     this.getNotes();
+    const owner = (await Auth.currentAuthenticatedUser()).username;
+
     this.createNoteListerner = API.graphql(
-      graphqlOperation(onCreateNote)
+      graphqlOperation(onCreateNote, {
+        owner,
+      })
     ).subscribe({
       next: (noteData) => {
         const newNote = noteData.value.data.onCreateNote;
@@ -39,7 +43,9 @@ class App extends Component {
     });
 
     this.updateNoteListener = API.graphql(
-      graphqlOperation(onUpdateNote)
+      graphqlOperation(onUpdateNote, {
+        owner,
+      })
     ).subscribe({
       next: (noteData) => {
         const { notes } = this.state;
@@ -55,9 +61,12 @@ class App extends Component {
     });
 
     this.deleteNoteListener = API.graphql(
-      graphqlOperation(onDeleteNote)
+      graphqlOperation(onDeleteNote, {
+        owner,
+      })
     ).subscribe({
       next: (noteData) => {
+        console.log("delete");
         const { notes } = this.state;
         const newNote = noteData.value.data.onDeleteNote;
         const newNotes = notes.filter((note) => note.id !== newNote.id);
@@ -99,7 +108,7 @@ class App extends Component {
 
   handleAddNote = async (event) => {
     event.preventDefault();
-    const { note, notes } = this.state;
+    const { note } = this.state;
     // check if we have an existing notem, if so update it
     if (this.hasExistingNote()) {
       this.handleUpdateNote();
